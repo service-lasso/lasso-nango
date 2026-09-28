@@ -1,42 +1,8 @@
-param(
-  [string]$Contract = ".\verify\service-harness.json",
-  [string]$OutputDir = ".\output\verify"
-)
-
 $ErrorActionPreference = 'Stop'
-
 $root = Split-Path -Parent $PSScriptRoot
-Set-Location $root
-
-function Resolve-HarnessBinary {
-  if ($env:SERVICE_LASSO_HARNESS_BIN) {
-    return $env:SERVICE_LASSO_HARNESS_BIN
-  }
-
-  $cmd = Get-Command service-lasso-harness -ErrorAction SilentlyContinue
-  if ($cmd) {
-    return $cmd.Source
-  }
-
-  $cmdExe = Get-Command service-lasso-harness.exe -ErrorAction SilentlyContinue
-  if ($cmdExe) {
-    return $cmdExe.Source
-  }
-
-  throw "service-lasso-harness binary not found. Set SERVICE_LASSO_HARNESS_BIN or add it to PATH."
-}
-
-$contractPath = [System.IO.Path]::GetFullPath((Join-Path $root $Contract))
-$outputPath = [System.IO.Path]::GetFullPath((Join-Path $root $OutputDir))
-New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
-
-$resolvedContractPath = Join-Path $root 'verify\service-harness.ci.json'
-$runOutputDir = Join-Path $outputPath 'harness-run'
-
-$doc = Get-Content $contractPath -Raw | ConvertFrom-Json
-$doc.artifact.path = '..\dist\echo-service-win32.zip'
-$doc | ConvertTo-Json -Depth 10 | Set-Content $resolvedContractPath
-
-$harness = Resolve-HarnessBinary
-& $harness validate-contract --contract $resolvedContractPath
-& $harness run --contract $resolvedContractPath --output-dir $runOutputDir
+& (Join-Path $root 'scripts\package.ps1')
+& (Join-Path $root 'scripts\test.ps1')
+$env:NANGO_BIND = '127.0.0.1'; $env:NANGO_HTTP_PORT = '13003'; $env:NANGO_CONNECT_PORT = '13009'; $env:NANGO_SERVER_URL = 'http://127.0.0.1:13003'; $env:NANGO_PUBLIC_CONNECT_URL = 'http://127.0.0.1:13009'; $env:NANGO_DATA_PATH = (Join-Path $root '.tmp\verify-data'); $env:NANGO_DB_NAME = 'nango'; $env:NANGO_DB_USER = 'nango'; $env:NANGO_DB_PASSWORD = 'not-a-secret-test-value'; $env:NANGO_ENCRYPTION_KEY = 'not-a-secret-test-value'; $env:NANGO_ADMIN_KEY = 'not-a-secret-test-value'; $env:NANGO_DASHBOARD_USERNAME = 'admin'; $env:NANGO_DASHBOARD_PASSWORD = 'not-a-secret-test-value'
+& docker compose -f (Join-Path $root 'runtime\docker-compose.yaml') config --quiet
+if ($LASTEXITCODE -ne 0) { throw 'Docker Compose configuration did not validate.' }
+Write-Host 'Nango package Compose configuration passed (Windows). Runtime smoke is exercised on Docker-enabled Linux CI.'

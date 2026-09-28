@@ -1,20 +1,46 @@
-# Service Lasso service template
+# Lasso Nango
 
-Turn an existing program into a service that Lasso can install, configure, start, check, and package.
+`lasso-nango` is the Service Lasso package for a local, self-hosted Nango
+instance. It packages Service Lasso's Compose wrapper; Nango itself remains
+the upstream software and runs from pinned official Docker images.
 
-**[Create your service from this template](https://github.com/service-lasso/service-lasso/blob/develop/docs/components/service-template/bootstrap-new-service-repo.md)**
+## What it manages
 
-Use GitHub's **Use this template** button, rename the sample, replace its runtime payload, and describe it in `service.json`.
+- Nango server at `http://127.0.0.1:3003`
+- Nango Connect UI at `http://127.0.0.1:3009`
+- a private PostgreSQL 16 database, persisted under the installed service root
+- a generated local encryption key, admin key, database password and dashboard
+  password in `.state/nango.env` (never committed or printed)
 
-Validate your first package:
+Nango's official self-hosted Compose guide is the upstream contract. This
+package pins `nangohq/nango-server:hosted-0.71.10` by digest and pins the
+official PostgreSQL 16 Alpine image by digest. See [UPSTREAM.md](UPSTREAM.md)
+for the recorded source evidence.
+
+## Requirements
+
+- Docker Engine with Docker Compose v2
+- Linux containers (Docker Desktop is supported on Windows and macOS)
+- ports 3003 and 3009 available on loopback
+
+The first start pulls images and can take several minutes. This package does
+not expose Nango beyond loopback and does not publish, deploy, or release
+anything by itself.
+
+## Local validation
 
 ```powershell
 pwsh -NoLogo -NoProfile -File ./scripts/package.ps1
 pwsh -NoLogo -NoProfile -File ./scripts/test.ps1
 ```
 
-[Write the manifest](https://github.com/service-lasso/service-lasso/blob/develop/docs/components/service-template/service-json-reference.md) · [Package it](https://github.com/service-lasso/service-lasso/blob/develop/docs/components/service-template/packaging.md) · [Validate it](https://github.com/service-lasso/service-lasso/blob/develop/docs/components/service-template/validation.md)
+On a Docker-enabled Linux host, `bash ./scripts/verify.sh` performs the
+bounded Compose start/health/stop smoke test. It creates only the temporary
+`lasso-nango-verify` Compose project and removes it at the end.
 
-Want an application with ready-made dependencies? Start with [PostgreSQL and a small app](https://github.com/service-lasso/service-lasso/blob/develop/docs/first-useful-service.md) or an [app template](https://github.com/service-lasso/service-lasso/blob/develop/docs/reference-apps.md).
+## Operator safety
 
-Reader guides live in Service Lasso. [Maintainer context](docs/maintainer-context.md) and implementation specs stay with the code.
+Do not copy `.state/nango.env` into tickets, logs, releases, or source control.
+It contains local credentials. `runtime/nango-stop.*` stops containers but
+keeps the database volume; deleting data is a separate, deliberate operator
+operation.

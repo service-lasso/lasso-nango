@@ -1,47 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT"
-
-CONTRACT="${1:-./verify/service-harness.json}"
-OUTPUT_DIR="${2:-./output/verify}"
-
-resolve_harness() {
-  if [[ -n "${SERVICE_LASSO_HARNESS_BIN:-}" ]]; then
-    echo "$SERVICE_LASSO_HARNESS_BIN"
-    return 0
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
+command -v docker >/dev/null 2>&1 || { echo 'Docker is required for the Nango smoke test.' >&2; exit 1; }
+TMP="$(mktemp -d)"; PROJECT="lasso-nango-verify-$$"; LOG="$TMP/nango.log"
+cleanup() { SERVICE_ROOT="$TMP" SERVICE_ARTIFACT_ROOT="$ROOT" NANGO_COMPOSE_PROJECT="$PROJECT" bash "$ROOT/runtime/nango-stop.sh" >/dev/null 2>&1 || true; rm -rf "$TMP"; }
+trap cleanup EXIT
+export SERVICE_ROOT="$TMP" SERVICE_ARTIFACT_ROOT="$ROOT" NANGO_COMPOSE_PROJECT="$PROJECT"
+export NANGO_BIND=127.0.0.1 NANGO_HTTP_PORT=13003 NANGO_CONNECT_PORT=13009 NANGO_SERVER_URL=http://127.0.0.1:13003 NANGO_PUBLIC_CONNECT_URL=http://127.0.0.1:13009
+bash "$ROOT/runtime/nango-service.sh" >"$LOG" 2>&1 &
+PID=$!
+for _ in $(seq 1 150); do
+  if curl --fail --silent --show-error http://127.0.0.1:13003/health >/dev/null; then
+    kill "$PID" 2>/dev/null || true
+    wait "$PID" 2>/dev/null || true
+    echo 'Nango Docker smoke test passed (Linux)'
+    exit 0
   fi
-
-  if command -v service-lasso-harness >/dev/null 2>&1; then
-    command -v service-lasso-harness
-    return 0
-  fi
-
-  echo "service-lasso-harness binary not found. Set SERVICE_LASSO_HARNESS_BIN or add it to PATH." >&2
-  return 1
-}
-
-mkdir -p "$OUTPUT_DIR"
-RESOLVED_CONTRACT="./verify/service-harness.ci.json"
-RUN_OUTPUT_DIR="$OUTPUT_DIR/harness-run"
-
-python3 - <<'PY' "$CONTRACT" "$RESOLVED_CONTRACT"
-import json
-import pathlib
-import sys
-
-contract_path = pathlib.Path(sys.argv[1]).resolve()
-resolved_path = pathlib.Path(sys.argv[2]).resolve()
-resolved_path.parent.mkdir(parents=True, exist_ok=True)
-
-doc = json.loads(contract_path.read_text())
-doc['artifact']['path'] = '../dist/echo-service-linux.tar.gz'
-if sys.platform == 'darwin':
-    doc['artifact']['path'] = '../dist/echo-service-darwin.tar.gz'
-resolved_path.write_text(json.dumps(doc, indent=2) + '\n')
-PY
-
-HARNESS="$(resolve_harness)"
-"$HARNESS" validate-contract --contract "$RESOLVED_CONTRACT"
-"$HARNESS" run --contract "$RESOLVED_CONTRACT" --output-dir "$RUN_OUTPUT_DIR"
+  if ! kill -0 "$PID" 2>/dev/null; then cat "$LOG" >&2; exit 1; fi
+  sleep 1
+done
+cat "$LOG" >&2
+exit 1

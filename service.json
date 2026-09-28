@@ -1,137 +1,54 @@
 {
-  "id": "echo-service",
-  "name": "Echo Service",
-  "description": "Minimal sample service used to prove the service-template contract.",
-  "enabled": true,
-  "version": "0.1.0",
+  "id": "nango",
+  "name": "Nango",
+  "description": "Locally managed Nango integration platform using the official self-hosted Docker images.",
+  "enabled": false,
+  "version": "0.71.10",
   "logoutput": true,
-  "icon": [
-    {
-      "provider": "lucide",
-      "name": "terminal"
-    }
-  ],
+  "icon": [{ "provider": "lucide", "name": "plug-zap" }],
   "servicetype": 50,
   "servicelocation": 10,
-  "logo": [],
-  "logs": {
-    "default": {
-      "path": "logs/echo-service.log"
-    }
-  },
+  "endpoints": [
+    { "id": "server", "kind": "network", "label": "Nango server API", "direction": "inbound", "transport": "tcp", "protocol": "http", "bind": "127.0.0.1", "port": { "default": 3003, "strategy": "fixed" }, "exposure": "local", "required": true, "primary": true },
+    { "id": "connect", "kind": "network", "label": "Nango Connect UI", "direction": "inbound", "transport": "tcp", "protocol": "http", "bind": "127.0.0.1", "port": { "default": 3009, "strategy": "fixed" }, "exposure": "local", "required": true },
+    { "id": "dashboard", "kind": "url", "label": "Nango dashboard", "target": "server", "url": "http://${endpoint.server.bind}:${endpoint.server.port}", "exposure": "local", "primary": true },
+    { "id": "connect_ui", "kind": "url", "label": "Nango Connect UI", "target": "connect", "url": "http://${endpoint.connect.bind}:${endpoint.connect.port}", "exposure": "local" }
+  ],
+  "logs": { "default": { "path": "logs/nango-compose.log" } },
   "meta": {
-    "developers": [
-      {
-        "name": "Service Lasso contributors"
-      }
-    ],
-    "license": "Apache-2.0",
-    "repository": {
-      "type": "git",
-      "url": "https://github.com/service-lasso/service-template.git"
-    },
-    "websiteUrl": "https://github.com/service-lasso/service-template",
-    "documentationUrl": "https://github.com/service-lasso/service-template/blob/main/README.md",
-    "issuesUrl": "https://github.com/service-lasso/service-template/issues",
-    "support": {
-      "issuesUrl": "https://github.com/service-lasso/service-template/issues"
-    },
-    "links": {
-      "repository": "https://github.com/service-lasso/service-template",
-      "issues": "https://github.com/service-lasso/service-template/issues",
-      "documentation": "https://github.com/service-lasso/service-template/blob/main/README.md"
-    },
-    "tags": [
-      "service-lasso",
-      "template",
-      "example-service"
-    ]
+    "developers": [{ "name": "Service Lasso contributors" }],
+    "license": "Elastic License 2.0",
+    "repository": { "type": "git", "url": "https://github.com/service-lasso/lasso-nango.git" },
+    "websiteUrl": "https://nango.dev/",
+    "documentationUrl": "https://github.com/service-lasso/lasso-nango/blob/develop/README.md",
+    "issuesUrl": "https://github.com/service-lasso/lasso-nango/issues",
+    "support": { "issuesUrl": "https://github.com/service-lasso/lasso-nango/issues" },
+    "links": { "repository": "https://github.com/service-lasso/lasso-nango", "upstream": "https://github.com/NangoHQ/nango", "upstreamSelfHosting": "https://docs.nango.dev/guides/self-hosting", "issues": "https://github.com/service-lasso/lasso-nango/issues" },
+    "tags": ["service-lasso", "nango", "integrations", "oauth", "docker"]
   },
   "artifact": {
     "kind": "archive",
-    "source": {
-      "type": "github-release",
-      "repo": "service-lasso/service-template",
-      "channel": "latest"
-    },
+    "source": { "type": "github-release", "repo": "service-lasso/lasso-nango", "channel": "latest" },
     "platforms": {
-      "win32": {
-        "assetName": "echo-service-win32.zip",
-        "archiveType": "zip",
-        "command": "./echo-service.exe",
-        "args": []
-      },
-      "darwin": {
-        "assetName": "echo-service-darwin.tar.gz",
-        "archiveType": "tar.gz",
-        "command": "./echo-service",
-        "args": []
-      },
-      "linux": {
-        "assetName": "echo-service-linux.tar.gz",
-        "archiveType": "tar.gz",
-        "command": "./echo-service",
-        "args": []
-      },
-      "default": {
-        "assetName": "echo-service-win32.zip",
-        "archiveType": "zip",
-        "command": "./echo-service.exe",
-        "args": []
-      }
+      "win32": { "assetName": "lasso-nango-win32.zip", "archiveType": "zip", "command": "./runtime/nango-service.ps1", "args": [], "checksum": { "algorithm": "sha256", "assetName": "SHA256SUMS.txt" } },
+      "linux": { "assetName": "lasso-nango-linux.tar.gz", "archiveType": "tar.gz", "command": "./runtime/nango-service.sh", "args": [], "checksum": { "algorithm": "sha256", "assetName": "SHA256SUMS.txt" } },
+      "darwin": { "assetName": "lasso-nango-darwin.tar.gz", "archiveType": "tar.gz", "command": "./runtime/nango-service.sh", "args": [], "checksum": { "algorithm": "sha256", "assetName": "SHA256SUMS.txt" } }
     }
   },
   "actions": {
-    "install": {
-      "description": "Acquire or unpack the packaged echo-service runtime artifact.",
-      "mode": "converge-install",
-      "idempotent": true
-    },
-    "config": {
-      "description": "Materialize deployment-local echo-service config and env values.",
-      "mode": "converge-config",
-      "idempotent": true
-    },
-    "update": {
-      "description": "Apply a newer release artifact and reconcile update-time changes before restart.",
-      "mode": "converge-update",
-      "idempotent": true
-    },
-    "start": {
-      "description": "Start the sample echo service.",
-      "mode": "runtime-start",
-      "idempotent": true
-    },
-    "stop": {
-      "description": "Stop the sample echo service gracefully.",
-      "mode": "runtime-stop",
-      "idempotent": true
-    },
-    "restart": {
-      "description": "Restart the sample echo service after config or update changes.",
-      "mode": "runtime-restart",
-      "idempotent": false
-    },
-    "rollback": {
-      "description": "Restore the previously deployed artifact if an update fails validation.",
-      "mode": "state-rollback",
-      "idempotent": false
-    }
+    "install": { "description": "Acquire the Lasso-owned Nango Compose package.", "mode": "built-in" },
+    "config": { "description": "Generate the local Nango database, encryption, and dashboard credentials on first start.", "mode": "built-in" },
+    "start": { "description": "Start Nango and its private PostgreSQL dependency through Docker Compose.", "mode": "built-in" },
+    "stop": { "description": "Stop the Nango Compose project without deleting persisted data.", "mode": "command", "commandline": { "win32": "powershell -NoProfile -ExecutionPolicy Bypass -File \"${SERVICE_ARTIFACT_ROOT}/runtime/nango-stop.ps1\"", "default": "\"${SERVICE_ARTIFACT_ROOT}/runtime/nango-stop.sh\"" } },
+    "restart": { "description": "Restart the Nango Compose project after a controlled configuration change.", "mode": "built-in" }
   },
   "execconfig": {
-    "serviceorder": 100,
-    "serviceport": 0,
-    "execcwd": "runtime",
-    "executable": "echo-service",
-    "env": {
-      "ECHO_MESSAGE": "hello from service-template"
-    },
+    "serviceorder": 200,
+    "execcwd": ".",
+    "executable": "nango-service",
+    "env": { "NANGO_BIND": "${endpoint.server.bind}", "NANGO_HTTP_PORT": "${endpoint.server.port}", "NANGO_CONNECT_PORT": "${endpoint.connect.port}", "NANGO_SERVER_URL": "${endpoint.dashboard.url}", "NANGO_PUBLIC_CONNECT_URL": "${endpoint.connect_ui.url}" },
     "depend_on": []
   },
-  "healthchecks": [
-    {
-      "id": "process-ready",
-      "type": "process"
-    }
-  ]
+  "healthchecks": [{ "id": "nango-server-ready", "type": "http", "url": "${endpoint.dashboard.url}/health", "expected_status": 200, "retries": 120, "interval": 1000, "timeout": 2000 }],
+  "updates": { "enabled": true, "mode": "notify", "track": "latest", "checkIntervalSeconds": 86400 }
 }
