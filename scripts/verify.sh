@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
 command -v docker >/dev/null 2>&1 || { echo 'Docker is required for the Nango smoke test.' >&2; exit 1; }
 TMP="$(mktemp -d)"; PROJECT="lasso-nango-verify-$$"; LOG="$TMP/nango.log"
-cleanup() { SERVICE_ROOT="$TMP" SERVICE_ARTIFACT_ROOT="$ROOT" NANGO_COMPOSE_PROJECT="$PROJECT" bash "$ROOT/runtime/nango-stop.sh" >/dev/null 2>&1 || true; rm -rf "$TMP"; }
+cleanup() { SERVICE_ROOT="$TMP" SERVICE_ARTIFACT_ROOT="$ROOT" NANGO_COMPOSE_PROJECT="$PROJECT" bash "$ROOT/runtime/nango-stop.sh" >/dev/null 2>&1 || true; chmod -R u+rwx "$TMP" 2>/dev/null || true; rm -rf "$TMP" || true; }
 trap cleanup EXIT
 export SERVICE_ROOT="$TMP" SERVICE_ARTIFACT_ROOT="$ROOT" NANGO_COMPOSE_PROJECT="$PROJECT"
 export NANGO_BIND=127.0.0.1 NANGO_HTTP_PORT=13003 NANGO_CONNECT_PORT=13009 NANGO_SERVER_URL=http://127.0.0.1:13003 NANGO_PUBLIC_CONNECT_URL=http://127.0.0.1:13009
